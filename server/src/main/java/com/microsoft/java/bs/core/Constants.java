@@ -19,6 +19,11 @@ public class Constants {
    * The version of the BSP specification.
    */
   public static final String BSP_VERSION = "2.1.0-M4";
+  /**
+   * The frequency of the cancellation.
+   */
+  public static final long CANCELLATION_CHECK_FREQUENCY = 500;
 
-  private Constants() {}
+  private Constants() {
+  }
 }

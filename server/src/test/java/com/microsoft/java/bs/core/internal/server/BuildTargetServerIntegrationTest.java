@@ -6,6 +6,7 @@ package com.microsoft.java.bs.core.internal.server;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.microsoft.java.bs.core.Launcher.LOGGER;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,7 +14,10 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
@@ -36,6 +40,7 @@ import ch.epfl.scala.bsp4j.DependencySourcesParams;
 import ch.epfl.scala.bsp4j.DependencySourcesResult;
 import ch.epfl.scala.bsp4j.DidChangeBuildTarget;
 import ch.epfl.scala.bsp4j.InitializeBuildParams;
+import ch.epfl.scala.bsp4j.InitializeBuildResult;
 import ch.epfl.scala.bsp4j.JavaBuildServer;
 import ch.epfl.scala.bsp4j.JvmBuildServer;
 import ch.epfl.scala.bsp4j.LogMessageParams;
@@ -115,7 +120,7 @@ class BuildTargetServerIntegrationTest {
       long timeoutMs = 5000;
       long endTime = System.currentTimeMillis() + timeoutMs;
       while (sizeSupplier.getAsInt() < size
-              && System.currentTimeMillis() < endTime) {
+          && System.currentTimeMillis() < endTime) {
         synchronized (this) {
           long waitTime = endTime - System.currentTimeMillis();
           if (waitTime > 0) {
@@ -132,13 +137,13 @@ class BuildTargetServerIntegrationTest {
 
     private CompileReport findCompileReport(BuildTargetIdentifier btId) {
       CompileReport compileReport = compileReports.stream()
-              .filter(report -> report.getTarget().equals(btId))
-              .findFirst()
-              .orElse(null);
+          .filter(report -> report.getTarget().equals(btId))
+          .findFirst()
+          .orElse(null);
       assertNotNull(compileReport, () -> {
         String availableTargets = compileReports.stream()
-                .map(report -> report.getTarget().toString())
-                .collect(Collectors.joining(", "));
+            .map(report -> report.getTarget().toString())
+            .collect(Collectors.joining(", "));
         return "Target not found " + btId + ". Available: " + availableTargets;
       });
       return compileReport;
@@ -217,15 +222,13 @@ class BuildTargetServerIntegrationTest {
         "testProjects",
         projectDir).toFile();
 
-    BuildClientCapabilities capabilities =
-        new BuildClientCapabilities(SupportedLanguages.allBspNames);
+    BuildClientCapabilities capabilities = new BuildClientCapabilities(SupportedLanguages.allBspNames);
     return new InitializeBuildParams(
         "test-client",
         "0.1.0",
         "0.1.0",
         root.toURI().toString(),
-        capabilities
-    );
+        capabilities);
   }
 
   private void withNewTestServer(String project, BiConsumer<TestServer, TestClient> consumer) {
@@ -246,35 +249,44 @@ class BuildTargetServerIntegrationTest {
       GradleApiConnector connector = new GradleApiConnector(preferenceManager);
       LifecycleService lifecycleService = new LifecycleService(connector, preferenceManager);
       BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
-              connector, preferenceManager);
-      GradleBuildServer gradleBuildServer =
-              new GradleBuildServer(lifecycleService, buildTargetService);
-      org.eclipse.lsp4j.jsonrpc.Launcher<BuildClient> serverLauncher =
-              new org.eclipse.lsp4j.jsonrpc.Launcher.Builder<BuildClient>()
-                      .setLocalService(gradleBuildServer)
-                      .setRemoteInterface(BuildClient.class)
-                      .setOutput(serverOut)
-                      .setInput(serverIn)
-                      .setExecutorService(threadPool)
-                      .create();
+          connector, preferenceManager);
+      GradleBuildServer gradleBuildServer = new GradleBuildServer(lifecycleService, buildTargetService);
+      org.eclipse.lsp4j.jsonrpc.Launcher<BuildClient> serverLauncher = new org.eclipse.lsp4j.jsonrpc.Launcher.Builder<BuildClient>()
+          .setLocalService(gradleBuildServer)
+          .setRemoteInterface(BuildClient.class)
+          .setOutput(serverOut)
+          .setInput(serverIn)
+          .setExecutorService(threadPool)
+          .create();
       buildTargetService.setClient(serverLauncher.getRemoteProxy());
       // client
       TestClient client = new TestClient();
-      org.eclipse.lsp4j.jsonrpc.Launcher<TestServer> clientLauncher =
-          new org.eclipse.lsp4j.jsonrpc.Launcher.Builder<TestServer>()
-              .setLocalService(client)
-              .setRemoteInterface(TestServer.class)
-              .setInput(clientIn)
-              .setOutput(clientOut)
-              .setExecutorService(threadPool)
-              .create();
+      org.eclipse.lsp4j.jsonrpc.Launcher<TestServer> clientLauncher = new org.eclipse.lsp4j.jsonrpc.Launcher.Builder<TestServer>()
+          .setLocalService(client)
+          .setRemoteInterface(TestServer.class)
+          .setInput(clientIn)
+          .setOutput(clientOut)
+          .setExecutorService(threadPool)
+          .create();
       // start
       clientLauncher.startListening();
       serverLauncher.startListening();
       TestServer testServer = clientLauncher.getRemoteProxy();
       try {
         InitializeBuildParams params = getInitializeBuildParams(project);
-        testServer.buildInitialize(params).join();
+        final CompletableFuture<?> buildResultFuture = testServer.buildInitialize(params);
+        final boolean canceledNow = buildResultFuture.cancel(true);
+        LOGGER.info("Operation Cancelled : " + canceledNow + " Time : " + new Date().toString());
+
+        if (!canceledNow) {
+          final InitializeBuildResult result = (InitializeBuildResult) buildResultFuture.join();
+          LOGGER.info("Operation was not cancelled. Waiting for result.");
+          final InitializeBuildResult buildResult = (InitializeBuildResult) result;
+        } else {
+          LOGGER.info("Operation was cancelled. Waiting for result.");
+          final Object result = buildResultFuture.join();
+            LOGGER.info("Operation was cancelled with message : " + result);
+        }
         testServer.onBuildInitialized();
         consumer.accept(testServer, client);
       } finally {
@@ -318,18 +330,17 @@ class BuildTargetServerIntegrationTest {
       // check dependency modules
       DependencyModulesParams dependencyModulesParams = new DependencyModulesParams(btIds);
       DependencyModulesResult dependencyModulesResult = gradleBuildServer
-              .buildTargetDependencyModules(dependencyModulesParams).join();
+          .buildTargetDependencyModules(dependencyModulesParams).join();
       assertEquals(2, dependencyModulesResult.getItems().size());
       List<MavenDependencyModuleArtifact> allArtifacts = dependencyModulesResult.getItems().stream()
-              .flatMap(item -> item.getModules().stream())
-              .filter(dependencyModule -> "maven".equals(dependencyModule.getDataKind()))
-              .map(dependencyModule -> JsonUtils.toModel(dependencyModule.getData(),
-                  MavenDependencyModule.class))
-              .flatMap(mavenDependencyModule -> mavenDependencyModule.getArtifacts().stream())
-              .filter(artifact -> "sources".equals(artifact.getClassifier()))
-              .collect(Collectors.toList());
-      assertTrue(allArtifacts.stream().anyMatch(artifact ->
-          artifact.getUri().endsWith("-sources.jar")));
+          .flatMap(item -> item.getModules().stream())
+          .filter(dependencyModule -> "maven".equals(dependencyModule.getDataKind()))
+          .map(dependencyModule -> JsonUtils.toModel(dependencyModule.getData(),
+              MavenDependencyModule.class))
+          .flatMap(mavenDependencyModule -> mavenDependencyModule.getArtifacts().stream())
+          .filter(artifact -> "sources".equals(artifact.getClassifier()))
+          .collect(Collectors.toList());
+      assertTrue(allArtifacts.stream().anyMatch(artifact -> artifact.getUri().endsWith("-sources.jar")));
 
       // clean targets
       CleanCacheParams cleanCacheParams = new CleanCacheParams(btIds);
