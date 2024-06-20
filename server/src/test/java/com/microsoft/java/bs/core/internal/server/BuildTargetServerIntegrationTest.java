@@ -283,9 +283,7 @@ class BuildTargetServerIntegrationTest {
           LOGGER.info("Operation was not cancelled. Waiting for result.");
           final InitializeBuildResult buildResult = (InitializeBuildResult) result;
         } else {
-          LOGGER.info("Operation was cancelled. Waiting for result.");
-          final Object result = buildResultFuture.join();
-            LOGGER.info("Operation was cancelled with message : " + result);
+          LOGGER.info("Operation was successfully cancelled.");
         }
         testServer.onBuildInitialized();
         consumer.accept(testServer, client);

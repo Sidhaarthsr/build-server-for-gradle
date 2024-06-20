@@ -11,9 +11,12 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CancellationException;
 
+import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.gradle.tooling.BuildException;
 import org.gradle.tooling.BuildLauncher;
+import org.gradle.tooling.CancellationToken;
 import org.gradle.tooling.GradleConnectionException;
 import org.gradle.tooling.GradleConnector;
 import org.gradle.tooling.ModelBuilder;
@@ -38,6 +41,7 @@ public class GradleApiConnector {
   private final PreferenceManager preferenceManager;
 
   public GradleApiConnector(PreferenceManager preferenceManager) {
+
     this.preferenceManager = preferenceManager;
     connectors = new HashMap<>();
   }
@@ -62,10 +66,15 @@ public class GradleApiConnector {
    * Get the source sets of the Gradle project.
    *
    * @param projectUri uri of the project
-   * @param client connection to BSP client
+   * @param client     connection to BSP client
    * @return an instance of {@link GradleSourceSets}
    */
-  public GradleSourceSets getGradleSourceSets(URI projectUri, BuildClient client) {
+  public GradleSourceSets getGradleSourceSets(URI projectUri,
+      BuildClient client,
+      final CancelChecker cancelChecker,
+      final CancellationToken token) throws CancellationException {
+    cancelChecker.checkCanceled();
+
     File initScript = Utils.getInitScriptFile();
     if (!initScript.exists()) {
       throw new IllegalStateException("Failed to get init script file.");
@@ -77,8 +86,7 @@ public class GradleApiConnector {
       ModelBuilder<GradleSourceSets> customModelBuilder = Utils.getModelBuilder(
           connection,
           preferenceManager.getPreferences(),
-          GradleSourceSets.class
-      );
+          GradleSourceSets.class);
       customModelBuilder.addProgressListener(reporter,
           OperationType.FILE_DOWNLOAD, OperationType.PROJECT_CONFIGURATION)
           .setStandardError(errorOut)
@@ -89,9 +97,10 @@ public class GradleApiConnector {
       }
       customModelBuilder.addJvmArguments("-Dbsp.gradle.supportedLanguages="
           + String.join(",", preferenceManager.getClientSupportedLanguages()));
-      // since the model returned from Gradle TAPI is a wrapped object, here we re-construct it
+      // since the model returned from Gradle TAPI is a wrapped object, here we
+      // re-construct it
       // via a copy constructor and return as a POJO.
-      return new DefaultGradleSourceSets(customModelBuilder.get());
+      return new DefaultGradleSourceSets(customModelBuilder.withCancellationToken(token).get());
     } catch (GradleConnectionException | IllegalStateException | IOException e) {
       String summary = e.getMessage();
       if (errorOut.size() > 0) {
@@ -106,22 +115,24 @@ public class GradleApiConnector {
    * Request Gradle daemon to run the tasks.
    *
    * @param projectUri uri of the project
-   * @param reporter reporter on feedback from Gradle
-   * @param tasks tasks to run
+   * @param reporter   reporter on feedback from Gradle
+   * @param tasks      tasks to run
    */
-  public StatusCode runTasks(URI projectUri, ProgressReporter reporter, String... tasks) {
-    // Don't issue a start progress update - the listener will pick that up automatically
+  public StatusCode runTasks(URI projectUri, ProgressReporter reporter, final CancelChecker cancelChecker,
+      final CancellationToken token, String... tasks) throws CancellationException {
+    // Don't issue a start progress update - the listener will pick that up
+    // automatically
     final ByteArrayOutputStream errorOut = new ByteArrayOutputStream();
     StatusCode statusCode = StatusCode.OK;
     try (ProjectConnection connection = getGradleConnector(projectUri).connect();
-        errorOut
-    ) {
+        errorOut) {
       BuildLauncher launcher = Utils.getBuildLauncher(connection,
           preferenceManager.getPreferences());
       // TODO: consider to use outputstream to capture the output.
       launcher.addProgressListener(reporter, OperationType.TASK)
           .setStandardError(errorOut)
           .forTasks(tasks)
+          .withCancellationToken(token)
           .run();
     } catch (IOException e) {
       // caused by close the output stream, just simply log the error.
@@ -138,8 +149,11 @@ public class GradleApiConnector {
     return statusCode;
   }
 
-  public void shutdown() {
-    connectors.values().forEach(GradleConnector::disconnect);
+  public void shutdown(final CancelChecker cancelChecker) throws CancellationException {
+    connectors.values().forEach(connector -> {
+      cancelChecker.checkCanceled();
+      connector.disconnect();
+    });
   }
 
   private GradleConnector getGradleConnector(URI projectUri) {

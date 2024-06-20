@@ -27,6 +27,9 @@ import ch.epfl.scala.bsp4j.ScalaBuildTarget;
 import ch.epfl.scala.bsp4j.ScalacOptionsParams;
 import ch.epfl.scala.bsp4j.ScalacOptionsResult;
 import com.microsoft.java.bs.gradle.model.ScalaExtension;
+
+import org.eclipse.lsp4j.jsonrpc.CompletableFutures;
+import org.gradle.tooling.GradleConnector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -84,11 +87,13 @@ class BuildTargetServiceTest {
         mock(GradleSourceSet.class));
     when(buildTargetManager.getAllGradleBuildTargets())
         .thenReturn(Arrays.asList(gradleBuildTarget));
-    
+
     BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
         connector, preferenceManager);
 
-    WorkspaceBuildTargetsResult response = buildTargetService.getWorkspaceBuildTargets();
+    WorkspaceBuildTargetsResult response = CompletableFutures.computeAsync(cc -> {
+      return buildTargetService.getWorkspaceBuildTargets(cc, GradleConnector.newCancellationTokenSource().token());
+    }).join();
 
     assertEquals(1, response.getTargets().size());
     assertEquals("foo/bar", response.getTargets().get(0).getBaseDirectory());
@@ -103,14 +108,16 @@ class BuildTargetServiceTest {
     when(target.getDataKind()).thenReturn("scala");
     when(target.getData()).thenReturn(new ScalaBuildTarget(null, null, null, null, null));
     GradleBuildTarget gradleBuildTarget = new GradleBuildTarget(target,
-            mock(GradleSourceSet.class));
+        mock(GradleSourceSet.class));
     when(buildTargetManager.getAllGradleBuildTargets())
-            .thenReturn(Arrays.asList(gradleBuildTarget));
+        .thenReturn(Arrays.asList(gradleBuildTarget));
 
     BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
-            connector, preferenceManager);
+        connector, preferenceManager);
 
-    WorkspaceBuildTargetsResult response = buildTargetService.getWorkspaceBuildTargets();
+    WorkspaceBuildTargetsResult response = CompletableFutures.computeAsync(cc -> {
+      return buildTargetService.getWorkspaceBuildTargets(cc, GradleConnector.newCancellationTokenSource().token());
+    }).join();
 
     assertEquals(1, response.getTargets().size());
     assertEquals("foo/bar", response.getTargets().get(0).getBaseDirectory());
@@ -139,8 +146,10 @@ class BuildTargetServiceTest {
 
     BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
         connector, preferenceManager);
-    SourcesResult buildTargetSources = buildTargetService.getBuildTargetSources(new SourcesParams(
-            Arrays.asList(new BuildTargetIdentifier("test"))));
+    SourcesResult buildTargetSources = CompletableFutures.computeAsync(cc -> {
+      return buildTargetService.getBuildTargetSources(new SourcesParams(
+          Arrays.asList(new BuildTargetIdentifier("test"))), cc, GradleConnector.newCancellationTokenSource().token());
+    }).join();
     buildTargetSources.getItems().forEach(item -> {
       item.getSources().forEach(sourceItem -> {
         if (sourceItem.getGenerated()) {
@@ -168,8 +177,10 @@ class BuildTargetServiceTest {
 
     BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
         connector, preferenceManager);
-    ResourcesResult buildTargetResources = buildTargetService.getBuildTargetResources(
-        new ResourcesParams(Arrays.asList(new BuildTargetIdentifier("test"))));
+    ResourcesResult buildTargetResources = CompletableFutures.computeAsync(cc -> {
+      return buildTargetService.getBuildTargetResources(
+          new ResourcesParams(Arrays.asList(new BuildTargetIdentifier("test"))), cc, GradleConnector.newCancellationTokenSource().token());
+    }).join();
     buildTargetResources.getItems().forEach(item -> {
       item.getResources().forEach(resource -> {
         assertTrue(resource.contains("resourceDir"));
@@ -192,8 +203,10 @@ class BuildTargetServiceTest {
 
     BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
         connector, preferenceManager);
-    OutputPathsResult  outputPathsResult = buildTargetService.getBuildTargetOutputPaths(
-        new OutputPathsParams(Arrays.asList(new BuildTargetIdentifier("test"))));
+    OutputPathsResult outputPathsResult = CompletableFutures.computeAsync(cc -> {
+      return buildTargetService.getBuildTargetOutputPaths(
+          new OutputPathsParams(Arrays.asList(new BuildTargetIdentifier("test"))), cc, GradleConnector.newCancellationTokenSource().token());
+    }).join();
     assertEquals(1, outputPathsResult.getItems().size());
     assertEquals(2, outputPathsResult.getItems().get(0).getOutputPaths().size());
   }
@@ -210,9 +223,13 @@ class BuildTargetServiceTest {
     when(gradleSourceSet.getModuleDependencies()).thenReturn(moduleDependencies);
 
     BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
-            connector, preferenceManager);
-    DependencySourcesResult res = buildTargetService.getBuildTargetDependencySources(
-            new DependencySourcesParams(Arrays.asList(new BuildTargetIdentifier("test"))));
+        connector, preferenceManager);
+
+    final DependencySourcesResult res = CompletableFutures.computeAsync(cc -> {
+      return buildTargetService.getBuildTargetDependencySources(
+          new DependencySourcesParams(Arrays.asList(new BuildTargetIdentifier("test"))), cc, GradleConnector.newCancellationTokenSource().token());
+    }).join();
+
     assertEquals(1, res.getItems().size());
 
     List<String> sources = res.getItems().get(0).getSources();
@@ -232,8 +249,11 @@ class BuildTargetServiceTest {
 
     BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
         connector, preferenceManager);
-    DependencyModulesResult res = buildTargetService.getBuildTargetDependencyModules(
-        new DependencyModulesParams(Arrays.asList(new BuildTargetIdentifier("test"))));
+
+    DependencyModulesResult res = CompletableFutures.computeAsync(cc -> {
+      return buildTargetService.getBuildTargetDependencyModules(
+          new DependencyModulesParams(Arrays.asList(new BuildTargetIdentifier("test"))), cc, GradleConnector.newCancellationTokenSource().token());
+    }).join();
     assertEquals(1, res.getItems().size());
 
     List<DependencyModule> modules = res.getItems().get(0).getModules();
@@ -305,9 +325,11 @@ class BuildTargetServiceTest {
 
     BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
         connector, preferenceManager);
-    JavacOptionsResult javacOptions = buildTargetService.getBuildTargetJavacOptions(
-        new JavacOptionsParams(Arrays.asList(new BuildTargetIdentifier("test"))));
-  
+    JavacOptionsResult javacOptions = CompletableFutures.computeAsync(cc -> {
+      return buildTargetService.getBuildTargetJavacOptions(
+          new JavacOptionsParams(Arrays.asList(new BuildTargetIdentifier("test"))), cc, GradleConnector.newCancellationTokenSource().token());
+    }).join();
+
     assertEquals(1, javacOptions.getItems().size());
     assertEquals(2, javacOptions.getItems().get(0).getOptions().size());
   }
@@ -332,9 +354,11 @@ class BuildTargetServiceTest {
     when(gradleSourceSet.getExtensions()).thenReturn(extensions);
 
     BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
-            connector, preferenceManager);
-    ScalacOptionsResult scalacOptions = buildTargetService.getBuildTargetScalacOptions(
-            new ScalacOptionsParams(Arrays.asList(new BuildTargetIdentifier("test"))));
+        connector, preferenceManager);
+    ScalacOptionsResult scalacOptions = CompletableFutures.computeAsync(cc -> {
+      return buildTargetService.getBuildTargetScalacOptions(
+          new ScalacOptionsParams(Arrays.asList(new BuildTargetIdentifier("test"))), cc, GradleConnector.newCancellationTokenSource().token());
+    }).join();
 
     assertEquals(1, scalacOptions.getItems().size());
     assertEquals(4, scalacOptions.getItems().get(0).getOptions().size());

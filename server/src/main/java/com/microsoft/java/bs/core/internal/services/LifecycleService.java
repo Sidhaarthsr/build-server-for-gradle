@@ -11,9 +11,11 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.CancellationException;
 import java.util.logging.Level;
 
 import org.apache.commons.lang3.StringUtils;
+import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 
 import com.microsoft.java.bs.core.Constants;
 import com.microsoft.java.bs.core.internal.gradle.GradleApiConnector;
@@ -53,19 +55,25 @@ public class LifecycleService {
   /**
    * Initialize the build server.
    */
-  public InitializeBuildResult initializeServer(InitializeBuildParams params) {
-    initializePreferenceManager(params);
+  public InitializeBuildResult initializeServer(InitializeBuildParams params, final CancelChecker cancelChecker)
+      throws CancellationException {
+    initializePreferenceManager(params, cancelChecker);
 
-    BuildServerCapabilities capabilities = initializeServerCapabilities();
+    BuildServerCapabilities capabilities = initializeServerCapabilities(cancelChecker);
+
+    cancelChecker.checkCanceled();
+
     return new InitializeBuildResult(
         Constants.SERVER_NAME,
         Constants.SERVER_VERSION,
         Constants.BSP_VERSION,
-        capabilities
-    );
+        capabilities);
   }
 
-  void initializePreferenceManager(InitializeBuildParams params) {
+  void initializePreferenceManager(InitializeBuildParams params, final CancelChecker cancelChecker)
+      throws CancellationException {
+    cancelChecker.checkCanceled();
+
     URI rootUri = UriUtils.getUriFromString(params.getRootUri());
     preferenceManager.setRootUri(rootUri);
     preferenceManager.setClientSupportedLanguages(params.getCapabilities().getLanguageIds());
@@ -77,10 +85,12 @@ public class LifecycleService {
     }
 
     preferenceManager.setPreferences(preferences);
-    updateGradleJavaHomeIfNecessary(rootUri);
+    updateGradleJavaHomeIfNecessary(rootUri, cancelChecker);
   }
 
-  private BuildServerCapabilities initializeServerCapabilities() {
+  private BuildServerCapabilities initializeServerCapabilities(final CancelChecker cancelChecker) throws CancellationException {
+    cancelChecker.checkCanceled();
+
     BuildServerCapabilities capabilities = new BuildServerCapabilities();
     capabilities.setResourcesProvider(true);
     capabilities.setOutputPathsProvider(true);
@@ -99,8 +109,8 @@ public class LifecycleService {
   /**
    * Shutdown all Gradle connectors and mark the server status to shutdown.
    */
-  public Object shutdown() {
-    connector.shutdown();
+  public Object shutdown(final CancelChecker cancelChecker) throws CancellationException {
+    connector.shutdown(cancelChecker);
     status = Status.SHUTDOWN;
     return null;
   }
@@ -125,13 +135,17 @@ public class LifecycleService {
   /**
    * Try to update the Gradle Java home if:
    * <ul>
-   *   <li>Gradle Java home is not set.</li>
-   *   <li>A valid JDK can be found to launch Gradle.</li>
+   * <li>Gradle Java home is not set.</li>
+   * <li>A valid JDK can be found to launch Gradle.</li>
    * </ul>
    *
-   * <p>The JDK installation path string will be set to {@link Preferences#gradleJavaHome}.
+   * <p>
+   * The JDK installation path string will be set to
+   * {@link Preferences#gradleJavaHome}.
    */
-  private void updateGradleJavaHomeIfNecessary(URI rootUri) {
+  private void updateGradleJavaHomeIfNecessary(URI rootUri, final CancelChecker cancelChecker) {
+    cancelChecker.checkCanceled();
+
     Preferences preferences = preferenceManager.getPreferences();
     if (preferences.getJdks() == null || preferences.getJdks().isEmpty()) {
       return;

@@ -5,6 +5,7 @@ package com.microsoft.java.bs.core.internal.server;
 
 import static com.microsoft.java.bs.core.Launcher.LOGGER;
 
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Executors;
@@ -21,8 +22,10 @@ import org.eclipse.lsp4j.jsonrpc.ResponseErrorException;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseError;
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode;
+import org.gradle.tooling.CancellationToken;
+import org.gradle.tooling.CancellationTokenSource;
+import org.gradle.tooling.GradleConnector;
 
-import com.microsoft.java.bs.core.Constants;
 import com.microsoft.java.bs.core.internal.log.BspTraceEntity;
 import com.microsoft.java.bs.core.internal.services.BuildTargetService;
 import com.microsoft.java.bs.core.internal.services.LifecycleService;
@@ -74,9 +77,6 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
 
   private BuildTargetService buildTargetService;
 
-  private static final ScheduledExecutorService executorService = Executors
-      .newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
-
   public GradleBuildServer(LifecycleService lifecycleService,
       BuildTargetService buildTargetService) {
     this.lifecycleService = lifecycleService;
@@ -85,10 +85,12 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
 
   @Override
   public CompletableFuture<InitializeBuildResult> buildInitialize(InitializeBuildParams params) {
-    LOGGER.setLevel(Level.INFO);
-    return handleRequest("build/initialize", () -> {
-      return lifecycleService.initializeServer(params);
-    });
+    try {
+      return handleRequest("build/initialize", cc -> lifecycleService.initializeServer(params, cc));
+    } catch (CancellationException e) {
+      // TODO : reset to prior state?
+      return null;
+    }
   }
 
   @Override
@@ -98,7 +100,12 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
 
   @Override
   public CompletableFuture<Object> buildShutdown() {
-    return handleRequest("build/shutdown", cc -> lifecycleService.shutdown());
+    try {
+      return handleRequest("build/shutdown", cc -> lifecycleService.shutdown(cc));
+    } catch (CancellationException e) {
+      // TODO : reset to prior state?
+      return null;
+    }
   }
 
   @Override
@@ -108,22 +115,40 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
 
   @Override
   public CompletableFuture<WorkspaceBuildTargetsResult> workspaceBuildTargets() {
-    return handleRequest("workspace/buildTargets", () -> {
-      return buildTargetService.getWorkspaceBuildTargets();
-    });
+    final CancellationTokenSource tokenSource = GradleConnector.newCancellationTokenSource();
+    try {
+      return handleRequest("workspace/buildTargets",
+          cc -> buildTargetService.getWorkspaceBuildTargets(cc, tokenSource.token()));
+    } catch (CancellationException e) {
+      tokenSource.cancel();
+      return null;
+    }
   }
 
   @Override
   public CompletableFuture<Object> workspaceReload() {
-    return handleRequest("workspace/reload", cc -> {
-      buildTargetService.reloadWorkspace();
+    final CancellationTokenSource tokenSource = GradleConnector.newCancellationTokenSource();
+    try {
+      return handleRequest("workspace/reload", cc -> {
+        buildTargetService.reloadWorkspace(cc, tokenSource.token());
+        return null;
+      });
+    } catch (CancellationException e) {
+      tokenSource.cancel();
       return null;
-    });
+    }
   }
 
   @Override
   public CompletableFuture<SourcesResult> buildTargetSources(SourcesParams params) {
-    return handleRequest("buildTarget/sources", cc -> buildTargetService.getBuildTargetSources(params));
+    final CancellationTokenSource tokenSource = GradleConnector.newCancellationTokenSource();
+    try {
+      return handleRequest("buildTarget/sources",
+          cc -> buildTargetService.getBuildTargetSources(params, cc, tokenSource.token()));
+    } catch (CancellationException e) {
+      tokenSource.cancel();
+      return null;
+    }
   }
 
   @Override
@@ -136,23 +161,47 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
   @Override
   public CompletableFuture<DependencySourcesResult> buildTargetDependencySources(
       DependencySourcesParams params) {
-    return handleRequest("buildTarget/dependencySources",
-        cc -> buildTargetService.getBuildTargetDependencySources(params));
+    final CancellationTokenSource tokenSource = GradleConnector.newCancellationTokenSource();
+    try {
+      return handleRequest("buildTarget/dependencySources",
+          cc -> buildTargetService.getBuildTargetDependencySources(params, cc, tokenSource.token()));
+    } catch (final CancellationException e) {
+      tokenSource.cancel();
+      return null;
+    }
   }
 
   @Override
   public CompletableFuture<ResourcesResult> buildTargetResources(ResourcesParams params) {
-    return handleRequest("buildTarget/resources", cc -> buildTargetService.getBuildTargetResources(params));
+    final CancellationTokenSource tokenSource = GradleConnector.newCancellationTokenSource();
+    try {
+      return handleRequest("buildTarget/resources", cc -> buildTargetService.getBuildTargetResources(params, cc, tokenSource.token()));
+    } catch (CancellationException e) {
+      tokenSource.cancel();
+      return null;
+    }
   }
 
   @Override
   public CompletableFuture<OutputPathsResult> buildTargetOutputPaths(OutputPathsParams params) {
-    return handleRequest("buildTarget/outputPaths", cc -> buildTargetService.getBuildTargetOutputPaths(params));
+    final CancellationTokenSource tokenSource = GradleConnector.newCancellationTokenSource();
+    try {
+      return handleRequest("buildTarget/outputPaths", cc -> buildTargetService.getBuildTargetOutputPaths(params, cc, tokenSource.token()));
+    } catch (CancellationException e) {
+      tokenSource.cancel();
+      return null;
+    }
   }
 
   @Override
   public CompletableFuture<CompileResult> buildTargetCompile(CompileParams params) {
-    return handleRequest("buildTarget/compile", cc -> buildTargetService.compile(params));
+    final CancellationTokenSource tokenSource = GradleConnector.newCancellationTokenSource();
+    try {
+      return handleRequest("buildTarget/compile", cc -> buildTargetService.compile(params, cc, tokenSource.token()));
+    } catch (CancellationException e) {
+      tokenSource.cancel();
+      return null;
+    }
   }
 
   @Override
@@ -175,25 +224,49 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
 
   @Override
   public CompletableFuture<CleanCacheResult> buildTargetCleanCache(CleanCacheParams params) {
-    return handleRequest("buildTarget/cleanCache", cc -> buildTargetService.cleanCache(params));
+    final CancellationTokenSource tokenSource = GradleConnector.newCancellationTokenSource();
+    try {
+      return handleRequest("buildTarget/cleanCache", cc -> buildTargetService.cleanCache(params, cc, tokenSource.token()));
+    } catch (CancellationException e) {
+      tokenSource.cancel();
+      return null;
+    }
   }
 
   @Override
   public CompletableFuture<DependencyModulesResult> buildTargetDependencyModules(
       DependencyModulesParams params) {
-    return handleRequest("buildTarget/dependencyModules",
-        cc -> buildTargetService.getBuildTargetDependencyModules(params));
+        final CancellationTokenSource tokenSource = GradleConnector.newCancellationTokenSource();
+    try {
+      return handleRequest("buildTarget/dependencyModules",
+          cc -> buildTargetService.getBuildTargetDependencyModules(params, cc, tokenSource.token()));
+    } catch (CancellationException e) {
+      tokenSource.cancel();
+      return null;
+    }
   }
 
   @Override
   public CompletableFuture<JavacOptionsResult> buildTargetJavacOptions(JavacOptionsParams params) {
-    return handleRequest("buildTarget/javacOptions", cc -> buildTargetService.getBuildTargetJavacOptions(params));
+    final CancellationTokenSource tokenSource = GradleConnector.newCancellationTokenSource();
+    try {
+      return handleRequest("buildTarget/javacOptions", cc -> buildTargetService.getBuildTargetJavacOptions(params, cc, tokenSource.token()));
+    } catch (CancellationException e) {
+      tokenSource.cancel();
+      return null;
+    }
   }
 
   @Override
-  public CompletableFuture<ScalacOptionsResult> buildTargetScalacOptions(
-      ScalacOptionsParams params) {
-    return handleRequest("buildTarget/scalacOptions", cc -> buildTargetService.getBuildTargetScalacOptions(params));
+  public CompletableFuture<ScalacOptionsResult> buildTargetScalacOptions(ScalacOptionsParams params) {
+    final CancellationTokenSource tokenSource = GradleConnector.newCancellationTokenSource();
+    try {
+      return handleRequest("buildTarget/scalacOptions",
+          cc -> buildTargetService.getBuildTargetScalacOptions(params, cc, tokenSource.token()));
+    } catch (CancellationException e) {
+      tokenSource.cancel();
+      return null;
+    }
   }
 
   @Override
@@ -220,26 +293,6 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
     } else {
       runnable.run();
     }
-  }
-
-  /**
-   * Handle request with no arguments.
-   * 
-   * @param <R>         Return type
-   * @param methodName  BSP method name
-   * @param requestTask Task to be performed
-   * @return
-   */
-  private <R> CompletableFuture<R> handleRequest(String methodName, final Supplier<R> requestTask) {
-    final Function<CancelChecker, R> supplier = cancelToken -> {
-      Runnable cancelTask = () -> {
-        cancelToken.checkCanceled();
-      };
-      executorService.scheduleAtFixedRate(cancelTask, 0,
-          Constants.CANCELLATION_CHECK_FREQUENCY, TimeUnit.MILLISECONDS);
-      return requestTask.get();
-    };
-    return handleRequest(methodName, supplier);
   }
 
   private <R> CompletableFuture<R> handleRequest(String methodName,

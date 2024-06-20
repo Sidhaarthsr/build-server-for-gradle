@@ -12,10 +12,15 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import com.microsoft.java.bs.gradle.model.ScalaExtension;
 import com.microsoft.java.bs.gradle.model.SupportedLanguages;
+
+import org.eclipse.lsp4j.jsonrpc.CancelChecker;
+import org.eclipse.lsp4j.jsonrpc.CompletableFutures.FutureCancelChecker;
+import org.gradle.tooling.GradleConnector;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -34,8 +39,7 @@ class GradleApiConnectorTest {
     projectPath = Paths.get(
         System.getProperty("user.dir"),
         "..",
-        "testProjects"
-    ).normalize();
+        "testProjects").normalize();
     String pluginDir = Paths.get(System.getProperty("user.dir"),
         "build", "libs", "plugins").toString();
     System.setProperty(Launcher.PROP_PLUGIN_DIR, pluginDir);
@@ -50,10 +54,11 @@ class GradleApiConnectorTest {
 
   private GradleSourceSets getGradleSourceSets(File projectDir) {
     GradleApiConnector connector = getConnector();
+    final CancelChecker cancelChecker = new FutureCancelChecker(new CompletableFuture<>());
     try {
-      return connector.getGradleSourceSets(projectDir.toURI(), null);
+      return connector.getGradleSourceSets(projectDir.toURI(), null, cancelChecker, GradleConnector.newCancellationTokenSource().token());
     } finally {
-      connector.shutdown();
+      connector.shutdown(cancelChecker);
     }
   }
 
@@ -64,7 +69,7 @@ class GradleApiConnectorTest {
     try {
       assertEquals("4.3", connector.getGradleVersion(projectDir.toURI()));
     } finally {
-      connector.shutdown();
+      connector.shutdown(new FutureCancelChecker(new CompletableFuture<>()));
     }
   }
 
@@ -137,13 +142,13 @@ class GradleApiConnectorTest {
       GradleSourceSet dependency) {
     boolean exists = sourceSet.getBuildTargetDependencies().stream()
         .anyMatch(dep -> dep.getProjectPath().equals(dependency.getProjectPath())
-                      && dep.getSourceSetName().equals(dependency.getSourceSetName()));
+            && dep.getSourceSetName().equals(dependency.getSourceSetName()));
     assertTrue(exists, () -> {
       String availableDependencies = sourceSet.getBuildTargetDependencies().stream()
           .map(ss -> ss.getProjectPath() + ' ' + ss.getSourceSetName())
           .collect(Collectors.joining(", "));
       return "Dependency not found " + dependency.getProjectPath() + ' '
-        + dependency.getSourceSetName() + ". Available: " + availableDependencies;
+          + dependency.getSourceSetName() + ". Available: " + availableDependencies;
     });
   }
 
@@ -243,10 +248,10 @@ class GradleApiConnectorTest {
 
     assertFalse(main.getCompileClasspath().isEmpty());
     assertTrue(main.getCompileClasspath().stream().anyMatch(
-            file -> file.getName().contains("scala-library")));
+        file -> file.getName().contains("scala-library")));
     assertFalse(scalaExtension.getScalaJars().isEmpty());
     assertTrue(scalaExtension.getScalaJars().stream().anyMatch(
-            file -> file.getName().contains("scala-compiler")));
+        file -> file.getName().contains("scala-compiler")));
     assertFalse(scalaExtension.getScalaCompilerArgs().isEmpty());
     assertTrue(scalaExtension.getScalaCompilerArgs().stream()
         .anyMatch(arg -> arg.equals("-deprecation")));
@@ -266,10 +271,10 @@ class GradleApiConnectorTest {
 
     assertFalse(main.getCompileClasspath().isEmpty());
     assertTrue(main.getCompileClasspath().stream().anyMatch(
-            file -> file.getName().contains("scala3-library_3")));
+        file -> file.getName().contains("scala3-library_3")));
     assertFalse(scalaExtension.getScalaJars().isEmpty());
     assertTrue(scalaExtension.getScalaJars().stream().anyMatch(
-            file -> file.getName().contains("scala3-compiler_3")));
+        file -> file.getName().contains("scala3-compiler_3")));
     assertFalse(scalaExtension.getScalaCompilerArgs().isEmpty());
     assertTrue(scalaExtension.getScalaCompilerArgs().stream()
         .anyMatch(arg -> arg.equals("-deprecation")));
