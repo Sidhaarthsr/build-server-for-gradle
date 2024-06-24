@@ -20,6 +20,5 @@ public class Constants {
    */
   public static final String BSP_VERSION = "2.1.0-M4";
 
-  private Constants() {
-  }
+  private Constants() {}
 }

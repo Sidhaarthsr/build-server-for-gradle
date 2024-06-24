@@ -7,12 +7,9 @@ import static com.microsoft.java.bs.core.Launcher.LOGGER;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.logging.Level;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -22,7 +19,6 @@ import org.eclipse.lsp4j.jsonrpc.ResponseErrorException;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseError;
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode;
-import org.gradle.tooling.CancellationToken;
 import org.gradle.tooling.CancellationTokenSource;
 import org.gradle.tooling.GradleConnector;
 
@@ -88,14 +84,14 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
     try {
       return handleRequest("build/initialize", cc -> lifecycleService.initializeServer(params, cc));
     } catch (CancellationException e) {
-      // TODO : reset to prior state?
+      // reset to prior state? or any resources to clear?
       return null;
     }
   }
 
   @Override
   public void onBuildInitialized() {
-    handleNotification("build/initialized", lifecycleService::onBuildInitialized, true /* async */);
+    handleNotification("build/initialized", lifecycleService::onBuildInitialized, true /*async*/);
   }
 
   @Override
@@ -103,14 +99,14 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
     try {
       return handleRequest("build/shutdown", cc -> lifecycleService.shutdown(cc));
     } catch (CancellationException e) {
-      // TODO : reset to prior state?
+      // reset to prior state? or any resources to clear?
       return null;
     }
   }
 
   @Override
   public void onBuildExit() {
-    handleNotification("build/exit", lifecycleService::exit, false /* async */);
+    handleNotification("build/exit", lifecycleService::exit, false /*async*/);
   }
 
   @Override
@@ -308,7 +304,6 @@ public class GradleBuildServer implements BuildServer, JavaBuildServer, ScalaBui
 
   private <T> CompletableFuture<T> runAsync(String methodName, Function<CancelChecker, T> request) {
     long startTime = System.nanoTime();
-
     return CancellableFuture.from(CompletableFutures.computeAsync(request))
         .thenApply(Either::<Throwable, T>forRight)
         .exceptionally(Either::forLeft)

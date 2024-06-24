@@ -41,7 +41,6 @@ public class GradleApiConnector {
   private final PreferenceManager preferenceManager;
 
   public GradleApiConnector(PreferenceManager preferenceManager) {
-
     this.preferenceManager = preferenceManager;
     connectors = new HashMap<>();
   }
@@ -69,7 +68,8 @@ public class GradleApiConnector {
    * @param client     connection to BSP client
    * @return an instance of {@link GradleSourceSets}
    */
-  public GradleSourceSets getGradleSourceSets(URI projectUri,
+  public GradleSourceSets getGradleSourceSets(
+      URI projectUri,
       BuildClient client,
       final CancelChecker cancelChecker,
       final CancellationToken token) throws CancellationException {
@@ -118,8 +118,13 @@ public class GradleApiConnector {
    * @param reporter   reporter on feedback from Gradle
    * @param tasks      tasks to run
    */
-  public StatusCode runTasks(URI projectUri, ProgressReporter reporter, final CancelChecker cancelChecker,
-      final CancellationToken token, String... tasks) throws CancellationException {
+  public StatusCode runTasks(
+      URI projectUri,
+      ProgressReporter reporter,
+      final CancelChecker cancelChecker,
+      final CancellationToken token,
+      String... tasks) throws CancellationException {
+        cancelChecker.checkCanceled();
     // Don't issue a start progress update - the listener will pick that up
     // automatically
     final ByteArrayOutputStream errorOut = new ByteArrayOutputStream();

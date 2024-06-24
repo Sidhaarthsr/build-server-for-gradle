@@ -15,13 +15,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
-
-import javax.print.CancelablePrintJob;
 
 import com.microsoft.java.bs.core.internal.gradle.GradleApiConnector;
 import com.microsoft.java.bs.core.internal.managers.BuildTargetManager;
@@ -114,7 +110,8 @@ public class BuildTargetService {
     this.firstTime = true;
   }
 
-  private List<BuildTargetIdentifier> updateBuildTargets(final CancelChecker cancelChecker,
+  private List<BuildTargetIdentifier> updateBuildTargets(
+      final CancelChecker cancelChecker,
       final CancellationToken token) throws CancellationException {
     cancelChecker.checkCanceled();
 
@@ -123,8 +120,8 @@ public class BuildTargetService {
     return buildTargetManager.store(sourceSets);
   }
 
-  private BuildTargetManager getBuildTargetManager(final CancelChecker cancelChecker, final CancellationToken token)
-      throws CancellationException {
+  private BuildTargetManager getBuildTargetManager(final CancelChecker cancelChecker,
+      final CancellationToken token) throws CancellationException {
     cancelChecker.checkCanceled();
 
     if (firstTime) {
@@ -138,8 +135,8 @@ public class BuildTargetService {
    * reload the sourcesets from scratch and notify the BSP client if they have
    * changed.
    */
-  public void reloadWorkspace(final CancelChecker cancelChecker, final CancellationToken token)
-      throws CancellationException {
+  public void reloadWorkspace(final CancelChecker cancelChecker,
+      final CancellationToken token) throws CancellationException {
     cancelChecker.checkCanceled();
 
     List<BuildTargetIdentifier> changedTargets = updateBuildTargets(cancelChecker, token);
@@ -159,7 +156,8 @@ public class BuildTargetService {
     client.onBuildTargetDidChange(param);
   }
 
-  private GradleBuildTarget getGradleBuildTarget(BuildTargetIdentifier btId, final CancelChecker cancelChecker,
+  private GradleBuildTarget getGradleBuildTarget(BuildTargetIdentifier btId,
+      final CancelChecker cancelChecker,
       final CancellationToken token) throws CancellationException {
     return getBuildTargetManager(cancelChecker, token).getGradleBuildTarget(btId);
   }
@@ -188,7 +186,9 @@ public class BuildTargetService {
   /**
    * Get the sources.
    */
-  public SourcesResult getBuildTargetSources(SourcesParams params, final CancelChecker cancelChecker,
+  public SourcesResult getBuildTargetSources(
+      SourcesParams params,
+      final CancelChecker cancelChecker,
       final CancellationToken token) throws CancellationException {
     List<SourcesItem> sourceItems = new ArrayList<>();
     for (BuildTargetIdentifier btId : params.getTargets()) {
@@ -218,9 +218,10 @@ public class BuildTargetService {
   /**
    * Get the resources.
    */
-  public ResourcesResult getBuildTargetResources(ResourcesParams params, final CancelChecker cancelChecker,
-      final CancellationToken token)
-      throws CancellationException {
+  public ResourcesResult getBuildTargetResources(
+      ResourcesParams params,
+      final CancelChecker cancelChecker,
+      final CancellationToken token) throws CancellationException {
     List<ResourcesItem> items = new ArrayList<>();
     for (BuildTargetIdentifier btId : params.getTargets()) {
       GradleBuildTarget target = getGradleBuildTarget(btId, cancelChecker, token);
@@ -244,7 +245,9 @@ public class BuildTargetService {
   /**
    * Get the output paths.
    */
-  public OutputPathsResult getBuildTargetOutputPaths(OutputPathsParams params, final CancelChecker cancelChecker,
+  public OutputPathsResult getBuildTargetOutputPaths(
+      OutputPathsParams params,
+      final CancelChecker cancelChecker,
       final CancellationToken token) throws CancellationException {
     List<OutputPathsItem> items = new ArrayList<>();
     for (BuildTargetIdentifier btId : params.getTargets()) {
@@ -286,8 +289,10 @@ public class BuildTargetService {
   /**
    * Get artifacts dependencies - old way.
    */
-  public DependencySourcesResult getBuildTargetDependencySources(DependencySourcesParams params,
-      final CancelChecker cancelChecker, final CancellationToken token) throws CancellationException {
+  public DependencySourcesResult getBuildTargetDependencySources(
+      DependencySourcesParams params,
+      final CancelChecker cancelChecker,
+      final CancellationToken token) throws CancellationException {
     List<DependencySourcesItem> items = new ArrayList<>();
     for (BuildTargetIdentifier btId : params.getTargets()) {
       GradleBuildTarget target = getGradleBuildTarget(btId, cancelChecker, token);
@@ -315,8 +320,10 @@ public class BuildTargetService {
   /**
    * Get artifacts dependencies.
    */
-  public DependencyModulesResult getBuildTargetDependencyModules(DependencyModulesParams params,
-      final CancelChecker cancelChecker, final CancellationToken token) throws CancellationException {
+  public DependencyModulesResult getBuildTargetDependencyModules(
+      DependencyModulesParams params,
+      final CancelChecker cancelChecker,
+      final CancellationToken token) throws CancellationException {
     List<DependencyModulesItem> items = new ArrayList<>();
     for (BuildTargetIdentifier btId : params.getTargets()) {
       GradleBuildTarget target = getGradleBuildTarget(btId, cancelChecker, token);
@@ -355,8 +362,10 @@ public class BuildTargetService {
   /**
    * Compile the build targets.
    */
-  public CompileResult compile(CompileParams params, final CancelChecker cancelChecker, final CancellationToken token)
-      throws CancellationException {
+  public CompileResult compile(
+      CompileParams params,
+      final CancelChecker cancelChecker,
+      final CancellationToken token) throws CancellationException {
     if (params.getTargets().isEmpty()) {
       return new CompileResult(StatusCode.OK);
     } else {
@@ -379,7 +388,9 @@ public class BuildTargetService {
   /**
    * clean the build targets.
    */
-  public CleanCacheResult cleanCache(CleanCacheParams params, final CancelChecker cancelChecker,
+  public CleanCacheResult cleanCache(
+      CleanCacheParams params,
+      final CancelChecker cancelChecker,
       final CancellationToken token) throws CancellationException {
     ProgressReporter reporter = new DefaultProgressReporter(client);
     StatusCode code = runTasks(params.getTargets(), this::getCleanTaskName, reporter, cancelChecker, token);
@@ -405,8 +416,9 @@ public class BuildTargetService {
   /**
    * group targets by project root and execute the supplied tasks.
    */
-  private StatusCode runTasks(List<BuildTargetIdentifier> targets,
-      TriFunction<BuildTargetIdentifier, CancelChecker,CancellationToken, String> taskNameCreator,
+  private StatusCode runTasks(
+      List<BuildTargetIdentifier> targets,
+      TriFunction<BuildTargetIdentifier, CancelChecker, CancellationToken, String> taskNameCreator,
       ProgressReporter reporter,
       final CancelChecker cancelChecker,
       final CancellationToken token) throws CancellationException {
@@ -415,7 +427,8 @@ public class BuildTargetService {
     for (Map.Entry<URI, Set<BuildTargetIdentifier>> entry : groupedTargets.entrySet()) {
       // remove duplicates as some tasks will have the same name for each sourceset
       // e.g. clean.
-      String[] tasks = entry.getValue().stream().map(task -> taskNameCreator.apply(task, cancelChecker, token)).distinct()
+      String[] tasks = entry.getValue().stream().map(task -> taskNameCreator.apply(task, cancelChecker, token))
+          .distinct()
           .toArray(String[]::new);
       code = connector.runTasks(entry.getKey(), reporter, cancelChecker, token, tasks);
       if (code == StatusCode.ERROR) {
@@ -428,7 +441,9 @@ public class BuildTargetService {
   /**
    * Get the Java compiler options.
    */
-  public JavacOptionsResult getBuildTargetJavacOptions(JavacOptionsParams params, final CancelChecker cancelChecker,
+  public JavacOptionsResult getBuildTargetJavacOptions(
+      JavacOptionsParams params,
+      final CancelChecker cancelChecker,
       final CancellationToken token) throws CancellationException {
     List<JavacOptionsItem> items = new ArrayList<>();
     for (BuildTargetIdentifier btId : params.getTargets()) {
@@ -467,7 +482,9 @@ public class BuildTargetService {
   /**
    * Get the Scala compiler options.
    */
-  public ScalacOptionsResult getBuildTargetScalacOptions(ScalacOptionsParams params, final CancelChecker cancelChecker,
+  public ScalacOptionsResult getBuildTargetScalacOptions(
+      ScalacOptionsParams params,
+      final CancelChecker cancelChecker,
       final CancellationToken token) throws CancellationException {
     List<ScalacOptionsItem> items = new ArrayList<>();
     for (BuildTargetIdentifier btId : params.getTargets()) {
@@ -508,8 +525,10 @@ public class BuildTargetService {
    * projects with the same root directory can run their tasks
    * in one single call.
    */
-  private Map<URI, Set<BuildTargetIdentifier>> groupBuildTargetsByRootDir(List<BuildTargetIdentifier> targets,
-      final CancelChecker cancelChecker, final CancellationToken token) throws CancellationException {
+  private Map<URI, Set<BuildTargetIdentifier>> groupBuildTargetsByRootDir(
+      List<BuildTargetIdentifier> targets,
+      final CancelChecker cancelChecker,
+      final CancellationToken token) throws CancellationException {
     cancelChecker.checkCanceled();
     Map<URI, Set<BuildTargetIdentifier>> groupedTargets = new HashMap<>();
     for (BuildTargetIdentifier btId : targets) {
@@ -527,9 +546,10 @@ public class BuildTargetService {
    * available,
    * return the uri of the build target.
    */
-  private URI getRootProjectUri(BuildTargetIdentifier btId, final CancelChecker cancelChecker,
-      final CancellationToken token)
-      throws CancellationException {
+  private URI getRootProjectUri(
+      BuildTargetIdentifier btId,
+      final CancelChecker cancelChecker,
+      final CancellationToken token) throws CancellationException {
     GradleBuildTarget gradleBuildTarget = getGradleBuildTarget(btId, cancelChecker, token);
     if (gradleBuildTarget == null) {
       // TODO: https://github.com/microsoft/build-server-for-gradle/issues/50
@@ -546,8 +566,12 @@ public class BuildTargetService {
   /**
    * Return a source set task name.
    */
-  private String getProjectTaskName(BuildTargetIdentifier btId, String title,
-      Function<GradleSourceSet, String> creator, final CancelChecker cancelChecker, final CancellationToken token) {
+  private String getProjectTaskName(
+      BuildTargetIdentifier btId,
+      String title,
+      Function<GradleSourceSet, String> creator,
+      final CancelChecker cancelChecker,
+      final CancellationToken token) throws CancellationException {
     GradleBuildTarget gradleBuildTarget = getGradleBuildTarget(btId, cancelChecker, token);
     if (gradleBuildTarget == null) {
       // TODO: https://github.com/microsoft/build-server-for-gradle/issues/50
@@ -564,14 +588,20 @@ public class BuildTargetService {
   /**
    * Return the build task name - [project path]:[task].
    */
-  private String getBuildTaskName(BuildTargetIdentifier btId, final CancelChecker cancelChecker, final CancellationToken token) throws CancellationException{
+  private String getBuildTaskName(
+      BuildTargetIdentifier btId,
+      final CancelChecker cancelChecker,
+      final CancellationToken token) throws CancellationException {
     return getProjectTaskName(btId, "classes", GradleSourceSet::getClassesTaskName, cancelChecker, token);
   }
 
   /**
    * Return the clean task name - [project path]:[task].
    */
-  private String getCleanTaskName(BuildTargetIdentifier btId, final CancelChecker cancelChecker, final CancellationToken token) throws CancellationException{
+  private String getCleanTaskName(
+      BuildTargetIdentifier btId,
+      final CancelChecker cancelChecker,
+      final CancellationToken token) throws CancellationException {
     return getProjectTaskName(btId, "clean", GradleSourceSet::getCleanTaskName, cancelChecker, token);
   }
 }

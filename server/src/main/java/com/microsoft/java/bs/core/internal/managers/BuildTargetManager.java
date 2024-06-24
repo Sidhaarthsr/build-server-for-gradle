@@ -13,12 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
-
-import org.eclipse.lsp4j.jsonrpc.CancelChecker;
-import org.eclipse.lsp4j.jsonrpc.CompletableFutures;
 
 import ch.epfl.scala.bsp4j.JvmBuildTarget;
 import ch.epfl.scala.bsp4j.ScalaBuildTarget;
@@ -69,11 +64,12 @@ public class BuildTargetManager {
           languages,
           Collections.emptyList(),
           new BuildTargetCapabilities(
-              true /* canCompile */,
-              false /* canTest */,
-              false /* canRun */,
-              false /* canDebug */
-          ));
+            true /* canCompile */,
+            false /* canTest */,
+            false /* canRun */,
+            false /* canDebug */
+        )
+    );
       bt.setBaseDirectory(sourceSet.getRootDir().toURI().toString());
       bt.setDisplayName(sourceSet.getDisplayName());
 
@@ -130,8 +126,7 @@ public class BuildTargetManager {
   }
 
   private JvmBuildTarget getJvmBuildTarget(GradleSourceSet sourceSet, JavaExtension javaExtension) {
-    // See:
-    // https://build-server-protocol.github.io/docs/extensions/jvm#jvmbuildtarget
+    // See: https://build-server-protocol.github.io/docs/extensions/jvm#jvmbuildtarget
     return new JvmBuildTargetEx(
         javaExtension.getJavaHome() == null ? "" : javaExtension.getJavaHome().toURI().toString(),
         javaExtension.getJavaVersion() == null ? "" : javaExtension.getJavaVersion(),
@@ -139,7 +134,8 @@ public class BuildTargetManager {
         javaExtension.getSourceCompatibility() == null ? ""
             : javaExtension.getSourceCompatibility(),
         javaExtension.getTargetCompatibility() == null ? ""
-            : javaExtension.getTargetCompatibility());
+            : javaExtension.getTargetCompatibility()
+    );
   }
 
   private void setJvmBuildTarget(GradleSourceSet sourceSet, JavaExtension javaExtension,
@@ -150,8 +146,7 @@ public class BuildTargetManager {
 
   private ScalaBuildTarget getScalaBuildTarget(GradleSourceSet sourceSet,
       ScalaExtension scalaExtension, JavaExtension javaExtension) {
-    // See:
-    // https://build-server-protocol.github.io/docs/extensions/scala#scalabuildtarget
+    // See: https://build-server-protocol.github.io/docs/extensions/scala#scalabuildtarget
     JvmBuildTarget jvmBuildTarget = getJvmBuildTarget(sourceSet, javaExtension);
     List<String> scalaJars = scalaExtension.getScalaJars().stream()
         .map(file -> file.toURI().toString())
@@ -162,7 +157,8 @@ public class BuildTargetManager {
         scalaExtension.getScalaBinaryVersion() == null ? ""
             : scalaExtension.getScalaBinaryVersion(),
         ScalaPlatform.JVM,
-        scalaJars);
+        scalaJars
+    );
     scalaBuildTarget.setJvmBuildTarget(jvmBuildTarget);
     return scalaBuildTarget;
   }
@@ -181,8 +177,8 @@ public class BuildTargetManager {
       Collection<GradleBuildTarget> gradleBuildTargets,
       Map<String, BuildTargetIdentifier> projectPathToBuildTargetId) {
     for (GradleBuildTarget gradleBuildTarget : gradleBuildTargets) {
-      Set<BuildTargetDependency> buildTargetDependencies = gradleBuildTarget.getSourceSet()
-          .getBuildTargetDependencies();
+      Set<BuildTargetDependency> buildTargetDependencies = 
+      gradleBuildTarget.getSourceSet().getBuildTargetDependencies();
       if (buildTargetDependencies != null) {
         List<BuildTargetIdentifier> btDependencies = buildTargetDependencies.stream()
             .map(btDependency -> {

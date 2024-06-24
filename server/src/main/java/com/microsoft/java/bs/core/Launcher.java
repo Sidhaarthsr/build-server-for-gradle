@@ -7,8 +7,6 @@ import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.gradle.tooling.CancellationTokenSource;
-
 import com.microsoft.java.bs.core.internal.gradle.GradleApiConnector;
 import com.microsoft.java.bs.core.internal.log.LogHandler;
 import com.microsoft.java.bs.core.internal.log.TelemetryHandler;
