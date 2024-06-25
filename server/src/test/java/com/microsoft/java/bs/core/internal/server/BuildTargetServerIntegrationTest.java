@@ -120,7 +120,7 @@ class BuildTargetServerIntegrationTest {
       long timeoutMs = 5000;
       long endTime = System.currentTimeMillis() + timeoutMs;
       while (sizeSupplier.getAsInt() < size
-          && System.currentTimeMillis() < endTime) {
+              && System.currentTimeMillis() < endTime) {
         synchronized (this) {
           long waitTime = endTime - System.currentTimeMillis();
           if (waitTime > 0) {
@@ -137,13 +137,13 @@ class BuildTargetServerIntegrationTest {
 
     private CompileReport findCompileReport(BuildTargetIdentifier btId) {
       CompileReport compileReport = compileReports.stream()
-          .filter(report -> report.getTarget().equals(btId))
-          .findFirst()
-          .orElse(null);
+              .filter(report -> report.getTarget().equals(btId))
+              .findFirst()
+              .orElse(null);
       assertNotNull(compileReport, () -> {
         String availableTargets = compileReports.stream()
-            .map(report -> report.getTarget().toString())
-            .collect(Collectors.joining(", "));
+                .map(report -> report.getTarget().toString())
+                .collect(Collectors.joining(", "));
         return "Target not found " + btId + ". Available: " + availableTargets;
       });
       return compileReport;
@@ -222,13 +222,15 @@ class BuildTargetServerIntegrationTest {
         "testProjects",
         projectDir).toFile();
 
-    BuildClientCapabilities capabilities = new BuildClientCapabilities(SupportedLanguages.allBspNames);
+    BuildClientCapabilities capabilities = 
+        new BuildClientCapabilities(SupportedLanguages.allBspNames);
     return new InitializeBuildParams(
         "test-client",
         "0.1.0",
         "0.1.0",
         root.toURI().toString(),
-        capabilities);
+        capabilities
+    );
   }
 
   private void withNewTestServer(String project, BiConsumer<TestServer, TestClient> consumer) {
@@ -249,25 +251,28 @@ class BuildTargetServerIntegrationTest {
       GradleApiConnector connector = new GradleApiConnector(preferenceManager);
       LifecycleService lifecycleService = new LifecycleService(connector, preferenceManager);
       BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
-          connector, preferenceManager);
-      GradleBuildServer gradleBuildServer = new GradleBuildServer(lifecycleService, buildTargetService);
-      org.eclipse.lsp4j.jsonrpc.Launcher<BuildClient> serverLauncher = new org.eclipse.lsp4j.jsonrpc.Launcher.Builder<BuildClient>()
-          .setLocalService(gradleBuildServer)
-          .setRemoteInterface(BuildClient.class)
-          .setOutput(serverOut)
-          .setInput(serverIn)
-          .setExecutorService(threadPool)
-          .create();
+              connector, preferenceManager);
+      GradleBuildServer gradleBuildServer = 
+              new GradleBuildServer(lifecycleService, buildTargetService);
+      org.eclipse.lsp4j.jsonrpc.Launcher<BuildClient> serverLauncher = 
+              new org.eclipse.lsp4j.jsonrpc.Launcher.Builder<BuildClient>()
+                      .setLocalService(gradleBuildServer)
+                      .setRemoteInterface(BuildClient.class)
+                      .setOutput(serverOut)
+                      .setInput(serverIn)
+                      .setExecutorService(threadPool)
+                      .create();
       buildTargetService.setClient(serverLauncher.getRemoteProxy());
       // client
       TestClient client = new TestClient();
-      org.eclipse.lsp4j.jsonrpc.Launcher<TestServer> clientLauncher = new org.eclipse.lsp4j.jsonrpc.Launcher.Builder<TestServer>()
-          .setLocalService(client)
-          .setRemoteInterface(TestServer.class)
-          .setInput(clientIn)
-          .setOutput(clientOut)
-          .setExecutorService(threadPool)
-          .create();
+      org.eclipse.lsp4j.jsonrpc.Launcher<TestServer> clientLauncher = 
+          new org.eclipse.lsp4j.jsonrpc.Launcher.Builder<TestServer>()
+              .setLocalService(client)
+              .setRemoteInterface(TestServer.class)
+              .setInput(clientIn)
+              .setOutput(clientOut)
+              .setExecutorService(threadPool)
+              .create();
       // start
       clientLauncher.startListening();
       serverLauncher.startListening();
@@ -328,17 +333,18 @@ class BuildTargetServerIntegrationTest {
       // check dependency modules
       DependencyModulesParams dependencyModulesParams = new DependencyModulesParams(btIds);
       DependencyModulesResult dependencyModulesResult = gradleBuildServer
-          .buildTargetDependencyModules(dependencyModulesParams).join();
+              .buildTargetDependencyModules(dependencyModulesParams).join();
       assertEquals(2, dependencyModulesResult.getItems().size());
       List<MavenDependencyModuleArtifact> allArtifacts = dependencyModulesResult.getItems().stream()
-          .flatMap(item -> item.getModules().stream())
-          .filter(dependencyModule -> "maven".equals(dependencyModule.getDataKind()))
-          .map(dependencyModule -> JsonUtils.toModel(dependencyModule.getData(),
-              MavenDependencyModule.class))
-          .flatMap(mavenDependencyModule -> mavenDependencyModule.getArtifacts().stream())
-          .filter(artifact -> "sources".equals(artifact.getClassifier()))
-          .collect(Collectors.toList());
-      assertTrue(allArtifacts.stream().anyMatch(artifact -> artifact.getUri().endsWith("-sources.jar")));
+              .flatMap(item -> item.getModules().stream())
+              .filter(dependencyModule -> "maven".equals(dependencyModule.getDataKind()))
+              .map(dependencyModule -> JsonUtils.toModel(dependencyModule.getData(),
+            MavenDependencyModule.class))
+              .flatMap(mavenDependencyModule -> mavenDependencyModule.getArtifacts().stream())
+              .filter(artifact -> "sources".equals(artifact.getClassifier()))
+              .collect(Collectors.toList());
+      assertTrue(allArtifacts.stream().anyMatch(artifact -> 
+          artifact.getUri().endsWith("-sources.jar")));
 
       // clean targets
       CleanCacheParams cleanCacheParams = new CleanCacheParams(btIds);

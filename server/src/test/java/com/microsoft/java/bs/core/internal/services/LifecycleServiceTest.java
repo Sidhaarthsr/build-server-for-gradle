@@ -35,13 +35,15 @@ class LifecycleServiceTest {
 
   @Test
   void testInitializeServer() {
-    BuildClientCapabilities capabilities = new BuildClientCapabilities(SupportedLanguages.allBspNames);
+    BuildClientCapabilities capabilities = 
+        new BuildClientCapabilities(SupportedLanguages.allBspNames);
     InitializeBuildParams params = new InitializeBuildParams(
         "test-client",
         "0.1.0",
         "0.1.0",
         Paths.get(System.getProperty("java.io.tmpdir")).toUri().toString(),
-        capabilities);
+        capabilities
+    );
 
     LifecycleService lifecycleService = mock(LifecycleService.class);
     doNothing().when(lifecycleService).initializePreferenceManager(any(), any());
@@ -64,7 +66,8 @@ class LifecycleServiceTest {
         "0.1.0",
         "0.1.0",
         Paths.get(System.getProperty("java.io.tmpdir")).toUri().toString(),
-        capabilities);
+        capabilities
+    );
     Preferences preferences = new Preferences();
     preferences.setGradleVersion("8.1");
     params.setData(preferences);

@@ -261,8 +261,7 @@ public class BuildTargetService {
       GradleSourceSet sourceSet = target.getSourceSet();
       List<OutputPathItem> outputPaths = new ArrayList<>();
       // Due to the BSP spec does not support additional flags for each output path,
-      // we will leverage the query of the uri to mark whether this is a
-      // source/resource
+      // we will leverage the query of the uri to mark whether this is a source/resource
       // output path.
       // TODO: file a BSP spec issue to support additional flags for each output path.
 
@@ -270,14 +269,16 @@ public class BuildTargetService {
       if (sourceOutputDir != null) {
         outputPaths.add(new OutputPathItem(
             sourceOutputDir.toURI().toString() + "?kind=source",
-            OutputPathItemKind.DIRECTORY));
+            OutputPathItemKind.DIRECTORY
+        ));
       }
 
       File resourceOutputDir = sourceSet.getResourceOutputDir();
       if (resourceOutputDir != null) {
         outputPaths.add(new OutputPathItem(
             resourceOutputDir.toURI().toString() + "?kind=resource",
-            OutputPathItemKind.DIRECTORY));
+            OutputPathItemKind.DIRECTORY
+        ));
       }
 
       OutputPathsItem item = new OutputPathsItem(btId, outputPaths);
@@ -298,7 +299,7 @@ public class BuildTargetService {
       GradleBuildTarget target = getGradleBuildTarget(btId, cancelChecker, token);
       if (target == null) {
         LOGGER.warning("Skip output collection for the build target: " + btId.getUri()
-            + ". Because it cannot be found in the cache.");
+                + ". Because it cannot be found in the cache.");
         continue;
       }
 
@@ -306,9 +307,9 @@ public class BuildTargetService {
       List<String> sources = new ArrayList<>();
       for (GradleModuleDependency dep : sourceSet.getModuleDependencies()) {
         List<String> artifacts = dep.getArtifacts().stream()
-            .filter(a -> "sources".equals(a.getClassifier()))
-            .map(a -> a.getUri().toString())
-            .collect(Collectors.toList());
+                .filter(a -> "sources".equals(a.getClassifier()))
+                .map(a -> a.getUri().toString())
+                .collect(Collectors.toList());
         sources.addAll(artifacts);
       }
 
@@ -348,7 +349,8 @@ public class BuildTargetService {
             dep.getGroup(),
             dep.getModule(),
             dep.getVersion(),
-            artifacts);
+            artifacts
+        );
         module.setData(mavenModule);
         modules.add(module);
       }
@@ -425,10 +427,8 @@ public class BuildTargetService {
     Map<URI, Set<BuildTargetIdentifier>> groupedTargets = groupBuildTargetsByRootDir(targets, cancelChecker, token);
     StatusCode code = StatusCode.OK;
     for (Map.Entry<URI, Set<BuildTargetIdentifier>> entry : groupedTargets.entrySet()) {
-      // remove duplicates as some tasks will have the same name for each sourceset
-      // e.g. clean.
-      String[] tasks = entry.getValue().stream().map(task -> taskNameCreator.apply(task, cancelChecker, token))
-          .distinct()
+      // remove duplicates as some tasks will have the same name for each sourceset e.g. clean.
+      String[] tasks = entry.getValue().stream().map(task -> taskNameCreator.apply(task, cancelChecker, token)).distinct()
           .toArray(String[]::new);
       code = connector.runTasks(entry.getKey(), reporter, cancelChecker, token, tasks);
       if (code == StatusCode.ERROR) {
@@ -499,7 +499,7 @@ public class BuildTargetService {
       ScalaExtension scalaExtension = SupportedLanguages.SCALA.getExtension(sourceSet);
       if (scalaExtension == null) {
         LOGGER.warning("Skip scalac options collection for the build target: " + btId.getUri()
-            + ". Because the scalac extension cannot be found from source set.");
+                + ". Because the scalac extension cannot be found from source set.");
         continue;
       }
       List<String> classpath = sourceSet.getCompileClasspath().stream()
@@ -515,7 +515,8 @@ public class BuildTargetService {
           btId,
           scalaExtension.getScalaCompilerArgs(),
           classpath,
-          classesDir));
+          classesDir
+      ));
     }
     return new ScalacOptionsResult(items);
   }
@@ -542,8 +543,7 @@ public class BuildTargetService {
   }
 
   /**
-   * Try to get the project root directory uri. If root directory is not
-   * available,
+   * Try to get the project root directory uri. If root directory is not available,
    * return the uri of the build target.
    */
   private URI getRootProjectUri(

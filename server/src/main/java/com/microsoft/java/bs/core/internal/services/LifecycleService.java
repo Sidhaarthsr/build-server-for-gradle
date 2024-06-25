@@ -135,12 +135,11 @@ public class LifecycleService {
   /**
    * Try to update the Gradle Java home if:
    * <ul>
-   * <li>Gradle Java home is not set.</li>
-   * <li>A valid JDK can be found to launch Gradle.</li>
+   *   <li>Gradle Java home is not set.</li>
+   *   <li>A valid JDK can be found to launch Gradle.</li>
    * </ul>
    *
-   * <p>
-   * The JDK installation path string will be set to
+   * <p>The JDK installation path string will be set to
    * {@link Preferences#gradleJavaHome}.
    */
   private void updateGradleJavaHomeIfNecessary(URI rootUri, final CancelChecker cancelChecker) {

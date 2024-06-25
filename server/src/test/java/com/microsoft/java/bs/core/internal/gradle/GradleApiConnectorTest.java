@@ -142,13 +142,13 @@ class GradleApiConnectorTest {
       GradleSourceSet dependency) {
     boolean exists = sourceSet.getBuildTargetDependencies().stream()
         .anyMatch(dep -> dep.getProjectPath().equals(dependency.getProjectPath())
-            && dep.getSourceSetName().equals(dependency.getSourceSetName()));
+                      && dep.getSourceSetName().equals(dependency.getSourceSetName()));
     assertTrue(exists, () -> {
       String availableDependencies = sourceSet.getBuildTargetDependencies().stream()
           .map(ss -> ss.getProjectPath() + ' ' + ss.getSourceSetName())
           .collect(Collectors.joining(", "));
       return "Dependency not found " + dependency.getProjectPath() + ' '
-          + dependency.getSourceSetName() + ". Available: " + availableDependencies;
+        + dependency.getSourceSetName() + ". Available: " + availableDependencies;
     });
   }
 
@@ -248,10 +248,10 @@ class GradleApiConnectorTest {
 
     assertFalse(main.getCompileClasspath().isEmpty());
     assertTrue(main.getCompileClasspath().stream().anyMatch(
-        file -> file.getName().contains("scala-library")));
+            file -> file.getName().contains("scala-library")));
     assertFalse(scalaExtension.getScalaJars().isEmpty());
     assertTrue(scalaExtension.getScalaJars().stream().anyMatch(
-        file -> file.getName().contains("scala-compiler")));
+            file -> file.getName().contains("scala-compiler")));
     assertFalse(scalaExtension.getScalaCompilerArgs().isEmpty());
     assertTrue(scalaExtension.getScalaCompilerArgs().stream()
         .anyMatch(arg -> arg.equals("-deprecation")));
@@ -271,10 +271,10 @@ class GradleApiConnectorTest {
 
     assertFalse(main.getCompileClasspath().isEmpty());
     assertTrue(main.getCompileClasspath().stream().anyMatch(
-        file -> file.getName().contains("scala3-library_3")));
+            file -> file.getName().contains("scala3-library_3")));
     assertFalse(scalaExtension.getScalaJars().isEmpty());
     assertTrue(scalaExtension.getScalaJars().stream().anyMatch(
-        file -> file.getName().contains("scala3-compiler_3")));
+            file -> file.getName().contains("scala3-compiler_3")));
     assertFalse(scalaExtension.getScalaCompilerArgs().isEmpty());
     assertTrue(scalaExtension.getScalaCompilerArgs().stream()
         .anyMatch(arg -> arg.equals("-deprecation")));

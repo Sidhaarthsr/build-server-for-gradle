@@ -108,12 +108,12 @@ class BuildTargetServiceTest {
     when(target.getDataKind()).thenReturn("scala");
     when(target.getData()).thenReturn(new ScalaBuildTarget(null, null, null, null, null));
     GradleBuildTarget gradleBuildTarget = new GradleBuildTarget(target,
-        mock(GradleSourceSet.class));
+            mock(GradleSourceSet.class));
     when(buildTargetManager.getAllGradleBuildTargets())
-        .thenReturn(Arrays.asList(gradleBuildTarget));
+            .thenReturn(Arrays.asList(gradleBuildTarget));
 
     BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
-        connector, preferenceManager);
+            connector, preferenceManager);
 
     WorkspaceBuildTargetsResult response = CompletableFutures.computeAsync(cc -> {
       return buildTargetService.getWorkspaceBuildTargets(cc, GradleConnector.newCancellationTokenSource().token());
@@ -354,7 +354,7 @@ class BuildTargetServiceTest {
     when(gradleSourceSet.getExtensions()).thenReturn(extensions);
 
     BuildTargetService buildTargetService = new BuildTargetService(buildTargetManager,
-        connector, preferenceManager);
+            connector, preferenceManager);
     ScalacOptionsResult scalacOptions = CompletableFutures.computeAsync(cc -> {
       return buildTargetService.getBuildTargetScalacOptions(
           new ScalacOptionsParams(Arrays.asList(new BuildTargetIdentifier("test"))), cc, GradleConnector.newCancellationTokenSource().token());

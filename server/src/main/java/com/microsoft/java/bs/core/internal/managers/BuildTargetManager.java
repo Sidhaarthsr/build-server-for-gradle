@@ -68,8 +68,8 @@ public class BuildTargetManager {
             false /* canTest */,
             false /* canRun */,
             false /* canDebug */
-        )
-    );
+          )
+      );
       bt.setBaseDirectory(sourceSet.getRootDir().toURI().toString());
       bt.setDisplayName(sourceSet.getDisplayName());
 
@@ -177,8 +177,8 @@ public class BuildTargetManager {
       Collection<GradleBuildTarget> gradleBuildTargets,
       Map<String, BuildTargetIdentifier> projectPathToBuildTargetId) {
     for (GradleBuildTarget gradleBuildTarget : gradleBuildTargets) {
-      Set<BuildTargetDependency> buildTargetDependencies = 
-      gradleBuildTarget.getSourceSet().getBuildTargetDependencies();
+      Set<BuildTargetDependency> buildTargetDependencies =
+          gradleBuildTarget.getSourceSet().getBuildTargetDependencies();
       if (buildTargetDependencies != null) {
         List<BuildTargetIdentifier> btDependencies = buildTargetDependencies.stream()
             .map(btDependency -> {

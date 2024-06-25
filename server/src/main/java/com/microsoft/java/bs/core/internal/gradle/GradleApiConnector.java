@@ -65,7 +65,7 @@ public class GradleApiConnector {
    * Get the source sets of the Gradle project.
    *
    * @param projectUri uri of the project
-   * @param client     connection to BSP client
+   * @param client connection to BSP client
    * @return an instance of {@link GradleSourceSets}
    */
   public GradleSourceSets getGradleSourceSets(
@@ -86,7 +86,8 @@ public class GradleApiConnector {
       ModelBuilder<GradleSourceSets> customModelBuilder = Utils.getModelBuilder(
           connection,
           preferenceManager.getPreferences(),
-          GradleSourceSets.class);
+          GradleSourceSets.class
+      );
       customModelBuilder.addProgressListener(reporter,
           OperationType.FILE_DOWNLOAD, OperationType.PROJECT_CONFIGURATION)
           .setStandardError(errorOut)
@@ -97,8 +98,7 @@ public class GradleApiConnector {
       }
       customModelBuilder.addJvmArguments("-Dbsp.gradle.supportedLanguages="
           + String.join(",", preferenceManager.getClientSupportedLanguages()));
-      // since the model returned from Gradle TAPI is a wrapped object, here we
-      // re-construct it
+      // since the model returned from Gradle TAPI is a wrapped object, here we re-construct it
       // via a copy constructor and return as a POJO.
       return new DefaultGradleSourceSets(customModelBuilder.withCancellationToken(token).get());
     } catch (GradleConnectionException | IllegalStateException | IOException e) {
@@ -115,8 +115,8 @@ public class GradleApiConnector {
    * Request Gradle daemon to run the tasks.
    *
    * @param projectUri uri of the project
-   * @param reporter   reporter on feedback from Gradle
-   * @param tasks      tasks to run
+   * @param reporter reporter on feedback from Gradle
+   * @param tasks tasks to run
    */
   public StatusCode runTasks(
       URI projectUri,
@@ -125,12 +125,12 @@ public class GradleApiConnector {
       final CancellationToken token,
       String... tasks) throws CancellationException {
         cancelChecker.checkCanceled();
-    // Don't issue a start progress update - the listener will pick that up
-    // automatically
+    // Don't issue a start progress update - the listener will pick that up automatically
     final ByteArrayOutputStream errorOut = new ByteArrayOutputStream();
     StatusCode statusCode = StatusCode.OK;
     try (ProjectConnection connection = getGradleConnector(projectUri).connect();
-        errorOut) {
+        errorOut
+    ) {
       BuildLauncher launcher = Utils.getBuildLauncher(connection,
           preferenceManager.getPreferences());
       // TODO: consider to use outputstream to capture the output.
